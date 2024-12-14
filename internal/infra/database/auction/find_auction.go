@@ -3,12 +3,14 @@ package auction
 import (
 	"context"
 	"fmt"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
 	"fullcycle-auction_go/configuration/logger"
 	"fullcycle-auction_go/internal/entity/auction_entity"
 	"fullcycle-auction_go/internal/internal_error"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"time"
 )
 
 func (ar *AuctionRepository) FindAuctionById(
@@ -28,6 +30,7 @@ func (ar *AuctionRepository) FindAuctionById(
 		Description: auctionEntityMongo.Description,
 		Condition:   auctionEntityMongo.Condition,
 		Status:      auctionEntityMongo.Status,
+		EndDate:     time.Unix(auctionEntityMongo.EndDate, 0),
 		Timestamp:   time.Unix(auctionEntityMongo.Timestamp, 0),
 	}, nil
 }
@@ -48,7 +51,7 @@ func (repo *AuctionRepository) FindAuctions(
 	}
 
 	if productName != "" {
-		filter["productName"] = primitive.Regex{Pattern: productName, Options: "i"}
+		filter["product_name"] = primitive.Regex{Pattern: productName, Options: "i"}
 	}
 
 	cursor, err := repo.Collection.Find(ctx, filter)
@@ -73,6 +76,7 @@ func (repo *AuctionRepository) FindAuctions(
 			Status:      auction.Status,
 			Description: auction.Description,
 			Condition:   auction.Condition,
+			EndDate:     time.Unix(auction.EndDate, 0),
 			Timestamp:   time.Unix(auction.Timestamp, 0),
 		})
 	}

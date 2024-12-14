@@ -2,6 +2,15 @@ package main
 
 import (
 	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/mongo"
+
 	"fullcycle-auction_go/configuration/database/mongodb"
 	"fullcycle-auction_go/internal/infra/api/web/controller/auction_controller"
 	"fullcycle-auction_go/internal/infra/api/web/controller/bid_controller"
@@ -12,10 +21,6 @@ import (
 	"fullcycle-auction_go/internal/usecase/auction_usecase"
 	"fullcycle-auction_go/internal/usecase/bid_usecase"
 	"fullcycle-auction_go/internal/usecase/user_usecase"
-	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/mongo"
-	"log"
 )
 
 func main() {
@@ -45,15 +50,23 @@ func main() {
 	router.GET("/user/:userId", userController.FindUserById)
 
 	router.Run(":8080")
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
+	<-sig
+	log.Println("Shutting down server...")
 }
 
 func initDependencies(database *mongo.Database) (
 	userController *user_controller.UserController,
 	bidController *bid_controller.BidController,
-	auctionController *auction_controller.AuctionController) {
+	auctionController *auction_controller.AuctionController,
+) {
 
-	auctionRepository := auction.NewAuctionRepository(database)
+	auctionRepository := auction.NewAuctionRepository(database, nil)
 	bidRepository := bid.NewBidRepository(database, auctionRepository)
+	auctionRepository.SetStatusUpdateCallback(bidRepository)
 	userRepository := user.NewUserRepository(database)
 
 	userController = user_controller.NewUserController(

@@ -2,11 +2,12 @@ package auction_usecase
 
 import (
 	"context"
+	"time"
+
 	"fullcycle-auction_go/internal/entity/auction_entity"
 	"fullcycle-auction_go/internal/entity/bid_entity"
 	"fullcycle-auction_go/internal/internal_error"
 	"fullcycle-auction_go/internal/usecase/bid_usecase"
-	"time"
 )
 
 type AuctionInputDTO struct {
@@ -23,6 +24,7 @@ type AuctionOutputDTO struct {
 	Description string           `json:"description"`
 	Condition   ProductCondition `json:"condition"`
 	Status      AuctionStatus    `json:"status"`
+	EndDate     time.Time        `json:"end_date" time_format:"2006-01-02 15:04:05"`
 	Timestamp   time.Time        `json:"timestamp" time_format:"2006-01-02 15:04:05"`
 }
 

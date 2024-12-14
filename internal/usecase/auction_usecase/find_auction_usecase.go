@@ -2,6 +2,7 @@ package auction_usecase
 
 import (
 	"context"
+
 	"fullcycle-auction_go/configuration/logger"
 	"fullcycle-auction_go/internal/entity/auction_entity"
 	"fullcycle-auction_go/internal/internal_error"
@@ -22,6 +23,7 @@ func (au *AuctionUseCase) FindAuctionById(
 		Description: auctionEntity.Description,
 		Condition:   ProductCondition(auctionEntity.Condition),
 		Status:      AuctionStatus(auctionEntity.Status),
+		EndDate:     auctionEntity.EndDate,
 		Timestamp:   auctionEntity.Timestamp,
 	}, nil
 }
@@ -45,6 +47,7 @@ func (au *AuctionUseCase) FindAuctions(
 			Description: value.Description,
 			Condition:   ProductCondition(value.Condition),
 			Status:      AuctionStatus(value.Status),
+			EndDate:     value.EndDate,
 			Timestamp:   value.Timestamp,
 		})
 	}
@@ -67,6 +70,7 @@ func (au *AuctionUseCase) FindWinningBidByAuctionId(
 		Description: auction.Description,
 		Condition:   ProductCondition(auction.Condition),
 		Status:      AuctionStatus(auction.Status),
+		EndDate:     auction.EndDate,
 		Timestamp:   auction.Timestamp,
 	}
 

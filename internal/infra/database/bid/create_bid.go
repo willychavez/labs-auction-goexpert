@@ -2,16 +2,17 @@ package bid
 
 import (
 	"context"
-	"fullcycle-auction_go/configuration/logger"
-	"fullcycle-auction_go/internal/entity/auction_entity"
-	"fullcycle-auction_go/internal/entity/bid_entity"
-	"fullcycle-auction_go/internal/infra/database/auction"
-	"fullcycle-auction_go/internal/internal_error"
 	"os"
 	"sync"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"fullcycle-auction_go/configuration/logger"
+	"fullcycle-auction_go/internal/entity/auction_entity"
+	"fullcycle-auction_go/internal/entity/bid_entity"
+	"fullcycle-auction_go/internal/infra/database/auction"
+	"fullcycle-auction_go/internal/internal_error"
 )
 
 type BidEntityMongo struct {
@@ -23,24 +24,18 @@ type BidEntityMongo struct {
 }
 
 type BidRepository struct {
-	Collection            *mongo.Collection
-	AuctionRepository     *auction.AuctionRepository
-	auctionInterval       time.Duration
-	auctionStatusMap      map[string]auction_entity.AuctionStatus
-	auctionEndTimeMap     map[string]time.Time
-	auctionStatusMapMutex *sync.Mutex
-	auctionEndTimeMutex   *sync.Mutex
+	Collection        *mongo.Collection
+	AuctionRepository *auction.AuctionRepository
+	auctionInterval   time.Duration
+	auctionStatusMap  sync.Map // Replaces map[string]auction_entity.AuctionStatus
+	auctionEndTimeMap sync.Map // Replaces map[string]time.Time
 }
 
 func NewBidRepository(database *mongo.Database, auctionRepository *auction.AuctionRepository) *BidRepository {
 	return &BidRepository{
-		auctionInterval:       getAuctionInterval(),
-		auctionStatusMap:      make(map[string]auction_entity.AuctionStatus),
-		auctionEndTimeMap:     make(map[string]time.Time),
-		auctionStatusMapMutex: &sync.Mutex{},
-		auctionEndTimeMutex:   &sync.Mutex{},
-		Collection:            database.Collection("bids"),
-		AuctionRepository:     auctionRepository,
+		auctionInterval:   getAuctionInterval(),
+		Collection:        database.Collection("bids"),
+		AuctionRepository: auctionRepository,
 	}
 }
 
@@ -53,13 +48,8 @@ func (bd *BidRepository) CreateBid(
 		go func(bidValue bid_entity.Bid) {
 			defer wg.Done()
 
-			bd.auctionStatusMapMutex.Lock()
-			auctionStatus, okStatus := bd.auctionStatusMap[bidValue.AuctionId]
-			bd.auctionStatusMapMutex.Unlock()
-
-			bd.auctionEndTimeMutex.Lock()
-			auctionEndTime, okEndTime := bd.auctionEndTimeMap[bidValue.AuctionId]
-			bd.auctionEndTimeMutex.Unlock()
+			auctionStatus, okStatus := bd.getAuctionStatus(bidValue.AuctionId)
+			auctionEndTime, okEndTime := bd.getAuctionEndTime(bidValue.AuctionId)
 
 			bidEntityMongo := &BidEntityMongo{
 				Id:        bidValue.Id,
@@ -92,13 +82,8 @@ func (bd *BidRepository) CreateBid(
 				return
 			}
 
-			bd.auctionStatusMapMutex.Lock()
-			bd.auctionStatusMap[bidValue.AuctionId] = auctionEntity.Status
-			bd.auctionStatusMapMutex.Unlock()
-
-			bd.auctionEndTimeMutex.Lock()
-			bd.auctionEndTimeMap[bidValue.AuctionId] = auctionEntity.Timestamp.Add(bd.auctionInterval)
-			bd.auctionEndTimeMutex.Unlock()
+			bd.setAuctionStatus(bidValue.AuctionId, auctionEntity.Status)
+			bd.setAuctionEndTime(bidValue.AuctionId, auctionEntity.Timestamp.Add(bd.auctionInterval))
 
 			if _, err := bd.Collection.InsertOne(ctx, bidEntityMongo); err != nil {
 				logger.Error("Error trying to insert bid", err)
@@ -108,6 +93,34 @@ func (bd *BidRepository) CreateBid(
 	}
 	wg.Wait()
 	return nil
+}
+
+func (bd *BidRepository) getAuctionStatus(auctionId string) (auction_entity.AuctionStatus, bool) {
+	value, ok := bd.auctionStatusMap.Load(auctionId)
+	if !ok {
+		return auction_entity.AuctionStatus(0), false
+	}
+	return value.(auction_entity.AuctionStatus), true
+}
+
+func (bd *BidRepository) setAuctionStatus(auctionId string, status auction_entity.AuctionStatus) {
+	bd.auctionStatusMap.Store(auctionId, status)
+}
+
+func (bd *BidRepository) getAuctionEndTime(auctionId string) (time.Time, bool) {
+	value, ok := bd.auctionEndTimeMap.Load(auctionId)
+	if !ok {
+		return time.Time{}, false
+	}
+	return value.(time.Time), true
+}
+
+func (bd *BidRepository) setAuctionEndTime(auctionId string, endTime time.Time) {
+	bd.auctionEndTimeMap.Store(auctionId, endTime)
+}
+
+func (bd *BidRepository) UpdateAuctionStatus(auctionId string, status auction_entity.AuctionStatus) {
+	bd.setAuctionStatus(auctionId, status)
 }
 
 func getAuctionInterval() time.Duration {

@@ -1,4 +1,4 @@
-FROM golang:1.20
+FROM golang:1.23.4
 
 WORKDIR /app
 
@@ -11,5 +11,5 @@ COPY . .
 RUN go build -o /app/auction cmd/auction/main.go
 
 EXPOSE 8080
-
+ 
 ENTRYPOINT ["/app/auction"]

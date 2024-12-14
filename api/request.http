@@ -1,0 +1,76 @@
+@userID = ffe31076-e5a4-495a-8062-9a9506a13595
+@user2ID = 6eb46049-4005-4026-aedc-d8ce4d546034
+
+
+GET http://localhost:8080/user/{{userID}} HTTP/1.1
+Content-Type: application/json
+
+### 
+GET http://localhost:8080/user/{{user2ID}} HTTP/1.1
+Content-Type: application/json
+
+
+
+### create a new auction
+POST http://localhost:8080/auction HTTP/1.1
+Content-Type: application/json
+
+{
+  "product_name": "Monitor",
+  "category": "Electronics",
+  "description": "A 24 inch monitor",
+  "condition": 1
+}
+
+
+
+
+### find all auctions
+GET http://localhost:8080/auction?status=0 HTTP/1.1
+Content-Type: application/json
+
+###
+GET http://localhost:8080/auction?status=0&category=Electronics HTTP/1.1
+Content-Type: application/json
+
+###
+GET http://localhost:8080/auction?status=0&category=Electronics&productName=TV HTTP/1.1
+Content-Type: application/json
+
+
+
+# auctionID is the ID of the auction created in the POST request
+@auctionID = 
+
+### create a new bid user1
+POST http://localhost:8080/bid HTTP/1.1
+Content-Type: application/json
+
+{
+  "user_id": "{{userID}}",
+  "auction_id": "{{auctionID}}",
+  "amount": 120
+}
+
+### create a new bid user2
+POST http://localhost:8080/bid HTTP/1.1
+Content-Type: application/json
+
+{
+  "user_id": "{{user2ID}}",
+  "auction_id": "{{auctionID}}",
+  "amount": 121
+}
+
+
+### find all bids for an auction
+GET http://localhost:8080/bid/{{auctionID}} HTTP/1.1
+Content-Type: application/json
+
+### find the winner of an auction
+GET http://localhost:8080/auction/winner/{{auctionID}} HTTP/1.1
+Content-Type: application/json
+
+### find the auction details
+GET http://localhost:8080/auction/{{auctionID}} HTTP/1.1
+Content-Type: application/json
